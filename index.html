@@ -1,0 +1,1020 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日餐桶分配</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f9ff;
+        }
+        
+        .task-card {
+            transition: all 0.3s ease;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .number-box {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .spin-button {
+            transition: all 0.2s ease;
+        }
+        
+        .spin-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .spin-button:active {
+            transform: scale(0.95);
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+        }
+        
+        .number-input {
+            width: 100%;
+            text-align: center;
+        }
+        
+        .number-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .number-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .number-btn.selected {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .number-btn.used {
+            background-color: #d1d5db;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        
+        .day-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .day-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .day-btn:hover {
+            background-color: #d1d5db;
+        }
+        
+        .day-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-800 mb-2">每日餐桶分配</h1>
+            <p class="text-gray-600">今天由哪些同學負責呢？讓我們一起來安排！</p>
+        </header>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex flex-wrap justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-blue-700">今日值日生</h2>
+                <div class="flex space-x-2">
+                    <button id="resetBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">重置</button>
+                    <button id="spinAllBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">一鍵抽選全部</button>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="font-medium text-gray-700 mb-2">可選學生號碼：</h3>
+                <div class="number-selector flex flex-wrap gap-2 mb-4" id="numberSelector">
+                    <!-- 號碼按鈕將由 JavaScript 生成 -->
+                </div>
+                <div class="flex justify-between items-center">
+                    <p class="text-sm text-gray-500">點擊號碼選擇或取消選擇學生</p>
+                    <div class="flex space-x-2">
+                        <span id="selectedCount" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-md">已選: 0/12</span>
+                        <button id="clearSelectionBtn" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">清除選擇</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 飯 -->
+                <div class="task-card bg-yellow-50 rounded-lg p-5 border-l-4 border-yellow-400">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-yellow-700">
+                            <span class="inline-block mr-2">🍚</span>飯
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600" data-task="rice">抽選</button>
+                    </div>
+                    <div class="selected-students grid grid-cols-2 gap-2" data-task="rice">
+                        <div class="number-box bg-yellow-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-yellow-800">?</span>
+                        </div>
+                        <div class="number-box bg-yellow-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-yellow-800">?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 菜1 -->
+                <div class="task-card bg-green-50 rounded-lg p-5 border-l-4 border-green-400">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-green-700">
+                            <span class="inline-block mr-2">🥬</span>菜 (一)
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600" data-task="veg1">抽選</button>
+                    </div>
+                    <div class="selected-students grid grid-cols-2 gap-2" data-task="veg1">
+                        <div class="number-box bg-green-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-green-800">?</span>
+                        </div>
+                        <div class="number-box bg-green-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-green-800">?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 菜2 -->
+                <div class="task-card bg-emerald-50 rounded-lg p-5 border-l-4 border-emerald-400">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-emerald-700">
+                            <span class="inline-block mr-2">🥦</span>菜 (二)
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-emerald-500 text-white rounded-md hover:bg-emerald-600" data-task="veg2">抽選</button>
+                    </div>
+                    <div class="selected-students grid grid-cols-2 gap-2" data-task="veg2">
+                        <div class="number-box bg-emerald-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-emerald-800">?</span>
+                        </div>
+                        <div class="number-box bg-emerald-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-emerald-800">?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 菜3 -->
+                <div class="task-card bg-teal-50 rounded-lg p-5 border-l-4 border-teal-400" id="veg3Card">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-teal-700">
+                            <span class="inline-block mr-2">🥗</span>菜 (三)
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-teal-500 text-white rounded-md hover:bg-teal-600" data-task="veg3">抽選</button>
+                    </div>
+                    <div class="selected-students grid grid-cols-2 gap-2" data-task="veg3">
+                        <div class="number-box bg-teal-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-teal-800">?</span>
+                        </div>
+                        <div class="number-box bg-teal-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-teal-800">?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 湯 -->
+                <div class="task-card bg-red-50 rounded-lg p-5 border-l-4 border-red-400">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-red-700">
+                            <span class="inline-block mr-2">🍲</span>湯
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600" data-task="soup">抽選</button>
+                    </div>
+                    <div class="selected-students grid grid-cols-2 gap-2" data-task="soup">
+                        <div class="number-box bg-red-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-red-800">?</span>
+                        </div>
+                        <div class="number-box bg-red-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-red-800">?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 水果 -->
+                <div class="task-card bg-purple-50 rounded-lg p-5 border-l-4 border-purple-400">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-purple-700">
+                            <span class="inline-block mr-2">🍎</span>水果
+                        </h3>
+                        <button class="spin-button px-3 py-1 bg-purple-500 text-white rounded-md hover:bg-purple-600" data-task="fruit">抽選</button>
+                    </div>
+                    <div class="selected-students" data-task="fruit" id="fruitTaskContainer">
+                        <div class="number-box bg-purple-100 rounded p-2 text-center">
+                            <span class="task-number text-lg font-medium text-purple-800">?</span>
+                        </div>
+                        <div class="number-box bg-purple-100 rounded p-2 text-center second-fruit">
+                            <span class="task-number text-lg font-medium text-purple-800">?</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-blue-700 mb-4">本週值日表</h2>
+            
+            <!-- 星期選擇器 -->
+            <div class="day-selector mb-4">
+                <div class="day-btn" data-day="monday">週一</div>
+                <div class="day-btn" data-day="tuesday">週二</div>
+                <div class="day-btn" data-day="wednesday">週三</div>
+                <div class="day-btn" data-day="thursday">週四</div>
+                <div class="day-btn" data-day="friday">週五</div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr class="bg-blue-100">
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">項目</th>
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">週一</th>
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">週二</th>
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">週三</th>
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">週四</th>
+                            <th class="py-2 px-4 border-b border-gray-200 text-left">週五</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklyTable">
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🍚 飯</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🥬 菜 (一)</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🥦 菜 (二)</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🥗 菜 (三)</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🍲 湯</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200 font-medium">🍎 水果</td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                            <td class="py-2 px-4 border-b border-gray-200"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button id="saveWeeklyBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">儲存本週值日表</button>
+            </div>
+        </div>
+        
+        <!-- 學生選擇對話框 -->
+        <div id="studentSelectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                <h3 class="text-xl font-bold mb-4">選擇學生號碼</h3>
+                <div class="number-selector-modal flex flex-wrap gap-2 mb-4">
+                    <!-- 號碼按鈕將由 JavaScript 生成 -->
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelSelectBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">取消</button>
+                    <button id="confirmSelectBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">確認</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const totalStudents = 27;
+            let requiredStudents = 12; // 預設需要選擇12個學生號碼
+            const availableNumbers = Array.from({length: totalStudents}, (_, i) => i + 1);
+            const includedStudents = new Set(); // 被選中的學生號碼
+            const assignedStudents = new Set(); // 已分配的學生號碼
+            const weeklyData = {
+                monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {}
+            };
+            const dayMapping = {
+                0: 'monday',
+                1: 'tuesday',
+                2: 'wednesday',
+                3: 'thursday',
+                4: 'friday'
+            };
+            
+            // 獲取今天是星期幾
+            const today = new Date().getDay() - 1; // 0 = 星期一, 4 = 星期五
+            let currentDay = today >= 0 && today <= 4 ? dayMapping[today] : 'monday';
+            
+            // 生成號碼選擇器
+            const numberSelector = document.getElementById('numberSelector');
+            generateNumberButtons(numberSelector);
+            
+            // 初始化星期選擇器
+            initDaySelector();
+            
+            // 更新已選擇數量
+            function updateSelectedCount() {
+                const countElement = document.getElementById('selectedCount');
+                countElement.textContent = `已選: ${includedStudents.size}/${requiredStudents}`;
+                
+                if (includedStudents.size === requiredStudents) {
+                    countElement.classList.remove('bg-blue-100', 'text-blue-800');
+                    countElement.classList.add('bg-green-100', 'text-green-800');
+                } else {
+                    countElement.classList.remove('bg-green-100', 'text-green-800');
+                    countElement.classList.add('bg-blue-100', 'text-blue-800');
+                }
+            }
+            
+            // 初始化星期選擇器
+            function initDaySelector() {
+                const dayButtons = document.querySelectorAll('.day-btn');
+                
+                // 設置初始選中狀態
+                dayButtons.forEach(btn => {
+                    const day = btn.getAttribute('data-day');
+                    if (day === currentDay) {
+                        btn.classList.add('active');
+                    }
+                    
+                    btn.addEventListener('click', function() {
+                        // 移除所有按鈕的選中狀態
+                        dayButtons.forEach(b => b.classList.remove('active'));
+                        
+                        // 設置當前按鈕為選中狀態
+                        this.classList.add('active');
+                        
+                        // 更新當前選中的星期
+                        currentDay = this.getAttribute('data-day');
+                        
+                        // 更新表格高亮
+                        updateWeeklyTable();
+                        
+                        // 更新當前分配的學生
+                        updateCurrentDayAssignments();
+                        
+                        // 更新水果任務顯示和菜(三)任務顯示
+                        updateTasksDisplay();
+                        
+                        // 更新所需學生數量
+                        updateRequiredStudents();
+                    });
+                });
+                
+                // 初始化時更新任務顯示和所需學生數量
+                updateTasksDisplay();
+                updateRequiredStudents();
+            }
+            
+            // 更新所需學生數量
+            function updateRequiredStudents() {
+                if (currentDay === 'monday') {
+                    requiredStudents = 11; // 週一只需要11個學生
+                } else if (currentDay === 'wednesday') {
+                    requiredStudents = 10; // 週三只需要10個學生
+                } else if (currentDay === 'friday') {
+                    requiredStudents = 11; // 週五只需要11個學生
+                } else {
+                    requiredStudents = 12; // 其他日子需要12個學生
+                }
+                updateSelectedCount();
+            }
+            
+            // 更新水果任務和菜(三)任務顯示
+            function updateTasksDisplay() {
+                const fruitContainer = document.getElementById('fruitTaskContainer');
+                const secondFruit = fruitContainer.querySelector('.second-fruit');
+                const veg3Card = document.getElementById('veg3Card');
+                
+                // 處理水果任務
+                if (currentDay === 'monday' || currentDay === 'friday') {
+                    // 週一和週五只顯示一個人
+                    secondFruit.style.display = 'none';
+                    fruitContainer.classList.remove('grid', 'grid-cols-2', 'gap-2');
+                } else {
+                    // 其他日子顯示兩個人
+                    secondFruit.style.display = 'block';
+                    fruitContainer.classList.add('grid', 'grid-cols-2', 'gap-2');
+                }
+                
+                // 處理菜(三)任務
+                if (currentDay === 'wednesday') {
+                    // 週三不顯示菜(三)
+                    veg3Card.style.display = 'none';
+                } else {
+                    // 其他日子顯示菜(三)
+                    veg3Card.style.display = 'block';
+                }
+            }
+            
+            // 更新當前日期的分配
+            function updateCurrentDayAssignments() {
+                // 清除當前分配
+                resetSelection();
+                
+                // 如果當前日期有數據，則顯示
+                if (weeklyData[currentDay]) {
+                    const tasks = ['rice', 'veg1', 'veg2', 'veg3', 'soup', 'fruit'];
+                    
+                    tasks.forEach(task => {
+                        if (weeklyData[currentDay][task]) {
+                            const taskElement = document.querySelector(`.selected-students[data-task="${task}"]`);
+                            if (!taskElement) return; // 如果元素不存在，跳過
+                            
+                            // 如果任務卡片被隱藏，跳過
+                            if (task === 'veg3' && currentDay === 'wednesday') return;
+                            
+                            const numberElements = taskElement.querySelectorAll('.task-number');
+                            
+                            weeklyData[currentDay][task].forEach((num, index) => {
+                                if (index < numberElements.length) {
+                                    // 如果是週一或週五的水果且是第二個框，跳過
+                                    if (task === 'fruit' && (currentDay === 'monday' || currentDay === 'friday') && index === 1) return;
+                                    
+                                    numberElements[index].textContent = num;
+                                    assignedStudents.add(parseInt(num));
+                                }
+                            });
+                        }
+                    });
+                    
+                    // 更新號碼按鈕狀態
+                    updateNumberButtons();
+                }
+            }
+            
+            // 初始化抽選按鈕
+            document.querySelectorAll('.spin-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const task = this.getAttribute('data-task');
+                    
+                    // 如果是週三的菜(三)，不執行抽選
+                    if (task === 'veg3' && currentDay === 'wednesday') return;
+                    
+                    spinForTask(task);
+                });
+            });
+            
+            // 清除選擇按鈕
+            document.getElementById('clearSelectionBtn').addEventListener('click', function() {
+                includedStudents.clear();
+                updateNumberButtons();
+                updateSelectedCount();
+            });
+            
+            // 重置按鈕
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                resetSelection();
+            });
+            
+            // 一鍵抽選全部
+            document.getElementById('spinAllBtn').addEventListener('click', function() {
+                if (includedStudents.size !== requiredStudents) {
+                    alert(`請選擇剛好 ${requiredStudents} 個學生號碼！目前已選 ${includedStudents.size} 個。`);
+                    return;
+                }
+                
+                // 重置所有分配
+                resetSelection();
+                
+                // 從選中的學生中隨機分配
+                const selectedNumbers = Array.from(includedStudents);
+                // 打亂順序
+                shuffleArray(selectedNumbers);
+                
+                // 分配到各個任務
+                let tasks = ['rice', 'veg1', 'veg2', 'veg3', 'soup', 'fruit'];
+                
+                // 如果是週三，移除菜(三)任務
+                if (currentDay === 'wednesday') {
+                    tasks = tasks.filter(task => task !== 'veg3');
+                }
+                
+                let currentIndex = 0;
+                
+                // 為每個任務分配學生
+                tasks.forEach(task => {
+                    const taskElement = document.querySelector(`.selected-students[data-task="${task}"]`);
+                    if (!taskElement) return; // 如果元素不存在，跳過
+                    
+                    const numberElements = taskElement.querySelectorAll('.task-number');
+                    
+                    // 確定要分配的學生數量
+                    let studentsToAssign = 2; // 默認每個任務分配2個學生
+                    
+                    // 如果是週一或週五的水果，只分配1個學生
+                    if (task === 'fruit' && (currentDay === 'monday' || currentDay === 'friday')) {
+                        studentsToAssign = 1;
+                    }
+                    
+                    for (let i = 0; i < studentsToAssign; i++) {
+                        if (currentIndex < selectedNumbers.length && i < numberElements.length) {
+                            // 如果是週一或週五的水果且是第二個框，跳過
+                            if (task === 'fruit' && (currentDay === 'monday' || currentDay === 'friday') && i === 1) continue;
+                            
+                            const num = selectedNumbers[currentIndex];
+                            numberElements[i].textContent = num;
+                            assignedStudents.add(num);
+                            currentIndex++;
+                        }
+                    }
+                });
+                
+                // 更新號碼按鈕狀態
+                updateNumberButtons();
+                
+                // 添加動畫效果
+                document.querySelectorAll('.task-number').forEach(element => {
+                    if (element.parentElement.style.display === 'none') return;
+                    
+                    element.parentElement.classList.add('animate-pulse');
+                    setTimeout(() => {
+                        element.parentElement.classList.remove('animate-pulse');
+                    }, 500);
+                });
+                
+                // 顯示慶祝效果
+                showConfetti();
+            });
+            
+            // 儲存本週值日表
+            document.getElementById('saveWeeklyBtn').addEventListener('click', function() {
+                const tasks = ['rice', 'veg1', 'veg2', 'veg3', 'soup', 'fruit'];
+                
+                // 清除當前日期的數據
+                weeklyData[currentDay] = {};
+                
+                tasks.forEach(task => {
+                    // 如果是週三的菜(三)，跳過
+                    if (task === 'veg3' && currentDay === 'wednesday') return;
+                    
+                    const taskElement = document.querySelector(`.selected-students[data-task="${task}"]`);
+                    if (!taskElement) return; // 如果元素不存在，跳過
+                    
+                    const numberElements = taskElement.querySelectorAll('.task-number');
+                    const selectedNumbers = [];
+                    
+                    // 特殊處理週一和週五的水果任務
+                    if (task === 'fruit' && (currentDay === 'monday' || currentDay === 'friday')) {
+                        // 只取第一個號碼
+                        const firstNum = numberElements[0].textContent;
+                        if (firstNum !== '?' && firstNum !== '') {
+                            selectedNumbers.push(firstNum);
+                        }
+                    } else {
+                        // 其他任務或其他日期的水果任務，取所有號碼
+                        numberElements.forEach(element => {
+                            if (element.parentElement.style.display !== 'none') {
+                                const num = element.textContent;
+                                if (num !== '?' && num !== '') {
+                                    selectedNumbers.push(num);
+                                }
+                            }
+                        });
+                    }
+                    
+                    if (selectedNumbers.length > 0) {
+                        weeklyData[currentDay][task] = selectedNumbers;
+                    }
+                });
+                
+                updateWeeklyTable();
+                showConfetti();
+                
+                // 儲存到 localStorage
+                localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
+            });
+            
+            // 生成號碼按鈕
+            function generateNumberButtons(container) {
+                container.innerHTML = '';
+                
+                for (let i = 1; i <= totalStudents; i++) {
+                    const btn = document.createElement('div');
+                    btn.className = 'number-btn bg-gray-100 text-gray-800';
+                    btn.textContent = i;
+                    btn.dataset.number = i;
+                    
+                    if (includedStudents.has(i)) {
+                        btn.classList.add('selected');
+                    }
+                    
+                    if (assignedStudents.has(i)) {
+                        btn.classList.add('used');
+                    }
+                    
+                    btn.addEventListener('click', function() {
+                        const num = parseInt(this.dataset.number);
+                        
+                        // 切換選擇狀態
+                        if (includedStudents.has(num)) {
+                            includedStudents.delete(num);
+                            this.classList.remove('selected');
+                        } else {
+                            // 如果已經選滿了，不能再選
+                            if (includedStudents.size >= requiredStudents) {
+                                alert(`最多只能選擇 ${requiredStudents} 個學生！`);
+                                return;
+                            }
+                            includedStudents.add(num);
+                            this.classList.add('selected');
+                        }
+                        
+                        updateSelectedCount();
+                    });
+                    
+                    container.appendChild(btn);
+                }
+            }
+            
+            // 更新號碼按鈕狀態
+            function updateNumberButtons() {
+                document.querySelectorAll('#numberSelector .number-btn').forEach(btn => {
+                    const num = parseInt(btn.dataset.number);
+                    
+                    // 重置所有按鈕狀態
+                    btn.classList.remove('selected', 'used');
+                    
+                    // 設置選中狀態
+                    if (includedStudents.has(num)) {
+                        btn.classList.add('selected');
+                    }
+                    
+                    // 設置已使用狀態
+                    if (assignedStudents.has(num)) {
+                        btn.classList.add('used');
+                    }
+                });
+            }
+            
+            // 從 localStorage 載入資料
+            function loadSavedData() {
+                const savedData = localStorage.getItem('weeklyData');
+                if (savedData) {
+                    try {
+                        const parsedData = JSON.parse(savedData);
+                        Object.assign(weeklyData, parsedData);
+                        updateWeeklyTable();
+                        updateCurrentDayAssignments();
+                        updateTasksDisplay();
+                        updateRequiredStudents();
+                    } catch (e) {
+                        console.error('Error loading saved data:', e);
+                    }
+                } else {
+                    updateTasksDisplay();
+                    updateRequiredStudents();
+                }
+            }
+            
+            // 更新週表
+            function updateWeeklyTable() {
+                const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+                const tasks = ['rice', 'veg1', 'veg2', 'veg3', 'soup', 'fruit'];
+                
+                const rows = document.querySelectorAll('#weeklyTable tr');
+                
+                // 先清除所有高亮
+                document.querySelectorAll('#weeklyTable td').forEach(cell => {
+                    cell.classList.remove('bg-yellow-100');
+                });
+                
+                tasks.forEach((task, taskIndex) => {
+                    days.forEach((day, dayIndex) => {
+                        // 如果是週三的菜(三)，顯示為"不適用"
+                        if (task === 'veg3' && day === 'wednesday') {
+                            const cell = rows[taskIndex].cells[dayIndex + 1];
+                            cell.textContent = "不適用";
+                            cell.classList.add('text-gray-500', 'italic');
+                            
+                            // 高亮當前選中的星期
+                            if (day === currentDay) {
+                                cell.classList.add('bg-yellow-100');
+                            }
+                            return;
+                        }
+                        
+                        if (weeklyData[day] && weeklyData[day][task]) {
+                            const cell = rows[taskIndex].cells[dayIndex + 1];
+                            cell.textContent = weeklyData[day][task].join(', ');
+                            cell.classList.remove('text-gray-500', 'italic');
+                            
+                            // 高亮當前選中的星期
+                            if (day === currentDay) {
+                                cell.classList.add('bg-yellow-100');
+                            }
+                        } else {
+                            // 清空沒有數據的單元格
+                            const cell = rows[taskIndex].cells[dayIndex + 1];
+                            cell.textContent = '';
+                            cell.classList.remove('text-gray-500', 'italic');
+                            
+                            // 高亮當前選中的星期
+                            if (day === currentDay) {
+                                cell.classList.add('bg-yellow-100');
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // 為特定任務抽選學生
+            function spinForTask(task) {
+                if (includedStudents.size !== requiredStudents) {
+                    alert(`請選擇剛好 ${requiredStudents} 個學生號碼！目前已選 ${includedStudents.size} 個。`);
+                    return;
+                }
+                
+                // 如果是週三的菜(三)，不執行抽選
+                if (task === 'veg3' && currentDay === 'wednesday') return;
+                
+                const taskElement = document.querySelector(`.selected-students[data-task="${task}"]`);
+                if (!taskElement) return; // 如果元素不存在，跳過
+                
+                const numberElements = taskElement.querySelectorAll('.task-number');
+                
+                // 確定要分配的學生數量
+                let studentsToAssign = 2; // 默認分配2個學生
+                
+                // 如果是週一或週五的水果，只分配1個學生
+                if (task === 'fruit' && (currentDay === 'monday' || currentDay === 'friday')) {
+                    studentsToAssign = 1;
+                }
+                
+                // 獲取選中的號碼（排除已分配的號碼）
+                const availableForSelection = Array.from(includedStudents).filter(num => 
+                    !assignedStudents.has(num)
+                );
+                
+                // 如果可用號碼不足，顯示警告
+                if (availableForSelection.length < studentsToAssign) {
+                    alert(`可用號碼不足！需要 ${studentsToAssign} 個號碼，但只有 ${availableForSelection.length} 個可用。`);
+                    return;
+                }
+                
+                // 清除之前的選擇
+                numberElements.forEach(element => {
+                    if (element.parentElement.style.display === 'none') return;
+                    
+                    const currentNum = element.textContent;
+                    if (currentNum !== '?' && currentNum !== '') {
+                        assignedStudents.delete(parseInt(currentNum));
+                    }
+                    element.textContent = '?';
+                });
+                
+                // 動畫效果
+                let counter = 0;
+                const maxIterations = 20;
+                const interval = setInterval(() => {
+                    // 為了動畫效果，我們需要確保每次顯示的號碼不同
+                    const tempNumbers = [...availableForSelection];
+                    shuffleArray(tempNumbers);
+                    
+                    for (let i = 0; i < studentsToAssign; i++) {
+                        if (i < numberElements.length && tempNumbers[i] && numberElements[i].parentElement.style.display !== 'none') {
+                            numberElements[i].textContent = tempNumbers[i];
+                        }
+                    }
+                    
+                    counter++;
+                    if (counter >= maxIterations) {
+                        clearInterval(interval);
+                        
+                        // 最終選擇
+                        const finalNumbers = [];
+                        const tempAvailable = [...availableForSelection];
+                        shuffleArray(tempAvailable);
+                        
+                        for (let i = 0; i < studentsToAssign; i++) {
+                            if (i < numberElements.length && tempAvailable[i] && numberElements[i].parentElement.style.display !== 'none') {
+                                const finalNum = tempAvailable[i];
+                                finalNumbers.push(finalNum);
+                                numberElements[i].textContent = finalNum;
+                                assignedStudents.add(finalNum);
+                            }
+                        }
+                        
+                        // 更新號碼按鈕狀態
+                        updateNumberButtons();
+                        
+                        // 添加動畫效果
+                        for (let i = 0; i < studentsToAssign; i++) {
+                            if (i < numberElements.length && numberElements[i].parentElement.style.display !== 'none') {
+                                numberElements[i].parentElement.classList.add('animate-pulse');
+                                setTimeout(() => {
+                                    numberElements[i].parentElement.classList.remove('animate-pulse');
+                                }, 500);
+                            }
+                        }
+                    }
+                }, 100);
+            }
+            
+            // 重置選擇
+            function resetSelection() {
+                assignedStudents.clear();
+                document.querySelectorAll('.task-number').forEach(element => {
+                    element.textContent = '?';
+                });
+                updateNumberButtons();
+            }
+            
+            // 打亂數組順序
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            // 顯示慶祝效果
+            function showConfetti() {
+                const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+                
+                for (let i = 0; i < 100; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.top = -10 + 'px';
+                    document.body.appendChild(confetti);
+                    
+                    const size = Math.random() * 10 + 5;
+                    confetti.style.width = size + 'px';
+                    confetti.style.height = size + 'px';
+                    
+                    const duration = Math.random() * 3 + 2;
+                    confetti.style.animation = `fall ${duration}s linear forwards`;
+                    
+                    // 自定義動畫
+                    const keyframes = `
+                        @keyframes fall {
+                            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                            100% { transform: translateY(${Math.random() * 500 + 500}px) rotate(${Math.random() * 360}deg); opacity: 0; }
+                        }
+                    `;
+                    
+                    const style = document.createElement('style');
+                    style.innerHTML = keyframes;
+                    document.head.appendChild(style);
+                    
+                    // 移除元素
+                    setTimeout(() => {
+                        confetti.remove();
+                        style.remove();
+                    }, duration * 1000);
+                }
+            }
+            
+            // 讓任務卡片中的號碼可點擊
+            document.querySelectorAll('.number-box').forEach(box => {
+                box.addEventListener('click', function() {
+                    // 如果這個元素被隱藏，不處理點擊事件
+                    if (this.style.display === 'none') return;
+                    
+                    const taskNumber = this.querySelector('.task-number');
+                    const currentNumber = taskNumber.textContent;
+                    
+                    // 如果已經有號碼，先從已選擇集合中移除
+                    if (currentNumber !== '?' && currentNumber !== '') {
+                        assignedStudents.delete(parseInt(currentNumber));
+                    }
+                    
+                    // 打開學生選擇對話框
+                    openStudentSelectModal(number => {
+                        if (number) {
+                            taskNumber.textContent = number;
+                            assignedStudents.add(parseInt(number));
+                        } else {
+                            taskNumber.textContent = '?';
+                        }
+                        updateNumberButtons();
+                    });
+                });
+            });
+            
+            // 打開學生選擇對話框
+            function openStudentSelectModal(callback) {
+                const modal = document.getElementById('studentSelectModal');
+                const modalSelector = modal.querySelector('.number-selector-modal');
+                let selectedNumber = null;
+                
+                // 生成號碼按鈕
+                modalSelector.innerHTML = '';
+                
+                // 只顯示已選中的學生號碼
+                Array.from(includedStudents).sort((a, b) => a - b).forEach(i => {
+                    const btn = document.createElement('div');
+                    btn.className = 'number-btn bg-gray-100 text-gray-800';
+                    btn.textContent = i;
+                    
+                    // 如果已經被分配，標記為已使用
+                    if (assignedStudents.has(i)) {
+                        btn.classList.add('used');
+                    } else {
+                        btn.addEventListener('click', function() {
+                            // 移除之前的選擇
+                            modalSelector.querySelectorAll('.number-btn').forEach(b => {
+                                b.classList.remove('selected');
+                            });
+                            
+                            // 選擇當前號碼
+                            this.classList.add('selected');
+                            selectedNumber = i;
+                        });
+                    }
+                    
+                    modalSelector.appendChild(btn);
+                });
+                
+                // 顯示對話框
+                modal.classList.remove('hidden');
+                
+                // 確認按鈕
+                const confirmBtn = document.getElementById('confirmSelectBtn');
+                confirmBtn.onclick = function() {
+                    modal.classList.add('hidden');
+                    callback(selectedNumber);
+                };
+                
+                // 取消按鈕
+                const cancelBtn = document.getElementById('cancelSelectBtn');
+                cancelBtn.onclick = function() {
+                    modal.classList.add('hidden');
+                    callback(null);
+                };
+            }
+            
+            // 載入已儲存的資料
+            loadSavedData();
+            updateSelectedCount();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93cf6fb127184a15',t:'MTc0Njc3NTI0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
